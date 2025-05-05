@@ -1,10 +1,22 @@
-function kojiCanvas(params) {
-  let state = {
-    canvas: null,
-    ctx: null,
-  };
+class KojiCanvas {
+  constructor(params) {
+    this.params = params;
+    this.state = {
+      canvas: null,
+      ctx: null,
+    };
+    this.init();
+  }
+
+  init() {
+    // Здесь можно добавить инициализацию канваса, если потребуется
+  }
 }
 
-const params = {};
+const params = {
+  el: {
+    canvas: ".canvas",
+  },
+};
 
-kojiCanvas(params);
+new KojiCanvas(params);
