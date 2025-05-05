@@ -59,7 +59,6 @@ The canvas automatically resizes to fit the browser window.
 ## 📘 Method Documentation
 
 - `drawFrame(grid)` — draw a color grid from a 2D array of RGBA values.
-- `clearCanvas(gl, canvas)` — clear the entire canvas.
 
 ---
 
