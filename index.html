@@ -1,22 +1,46 @@
-
 <html>
-    <head>
-        <style>
-            .canvas {
-                width: 300px;
-                height: 300px;
-                border: 1px solid black;
-            }
-        </style>
+  <head>
+    <style>
+      .canvas {
+        width: 300px;
+        height: 300px;
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Koji Canvas</h1>
+    <p>JS code for work with canvas.</p>
 
-    </head>
-    <body>
-        <h1>Koji Canvas</h1>
-        <p>JS code for work with canvas.</p>
+    <canvas class="canvas"></canvas>
 
-        <canvas class="canvas"></canvas>
+    <script src="kojiCanvas.js"></script>
 
-        <script src="kojiCanvas.js"></script>
-        </script>
-    </body>
+    <script>
+      // EXAMPLE USAGE
+      const params = {
+        el: {
+          canvas: ".canvas",
+        },
+        retina: true,
+      };
+
+      const kojiCanvas = new KojiCanvas(params);
+
+      kojiCanvas.drawFrame([
+        [
+          [255, 0, 0, 128],
+          [0, 255, 0, 255],
+        ],
+        [
+          [0, 0, 255, 64],
+          [255, 255, 0, 200],
+        ],
+        [
+          [255, 0, 0, 255],
+          [0, 255, 0, 255],
+        ],
+      ]);
+    </script>
+  </body>
 </html>

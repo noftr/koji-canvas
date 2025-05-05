@@ -8,10 +8,10 @@ class KojiCanvas {
       vao: null,
       buffers: {},
       lastGrid: null,
-      locations: {}, // cache for uniform/attribute locations
-      gridSize: null, // cache for grid size
-      offsets: null, // cached Float32Array for offsets
-      colors: null, // cached Float32Array for colors
+      locations: {},
+      gridSize: null,
+      offsets: null,
+      colors: null,
     };
     this.init();
   }
@@ -305,27 +305,3 @@ class KojiCanvas {
     gl.vertexAttribDivisor(attribLoc, 1);
   }
 }
-
-const params = {
-  el: {
-    canvas: ".canvas",
-  },
-  retina: true,
-};
-
-const kojiCanvas = new KojiCanvas(params);
-
-kojiCanvas.drawFrame([
-  [
-    [255, 0, 0, 128],
-    [0, 255, 0, 255],
-  ],
-  [
-    [0, 0, 255, 64],
-    [255, 255, 0, 200],
-  ],
-  [
-    [255, 0, 0, 255],
-    [0, 255, 0, 255],
-  ],
-]);
