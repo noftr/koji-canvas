@@ -8,6 +8,10 @@ class KojiCanvas {
       vao: null,
       buffers: {},
       lastGrid: null,
+      locations: {}, // cache for uniform/attribute locations
+      gridSize: null, // cache for grid size
+      offsets: null, // cached Float32Array for offsets
+      colors: null, // cached Float32Array for colors
     };
     this.init();
   }
@@ -24,10 +28,15 @@ class KojiCanvas {
   }
 
   handleResize() {
-    // Recreate canvas size
-    this.state.canvas = this.canvasInit(this.params.el.canvas);
-    // Do not recreate WebGL2 context, but update viewport and uniforms
-    // Redraw last frame if it exists
+    const canvas = this.state.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = this.params.retina ? window.devicePixelRatio || 1 : 1;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    this.state.gl.viewport(0, 0, canvas.width, canvas.height);
+
     if (this.state.lastGrid) {
       this.drawFrame(this.state.lastGrid);
     }
@@ -63,11 +72,24 @@ class KojiCanvas {
     // 1. Compile and link shaders
     this.state.program = this.createAndLinkProgram(gl);
 
-    // 2. Create VAO and vertex buffer
+    // 2. Cache uniform and attribute locations after program is linked
+    this.cacheLocations(gl, this.state.program);
+
+    // 3. Create VAO and vertex buffer
     this.state.vao = this.createVAOAndVertexBuffer(gl, this.state.program);
 
-    // 3. Create instance buffers
+    // 4. Create instance buffers
     this.createInstanceBuffers(gl);
+  }
+
+  cacheLocations(gl, program) {
+    // Cache uniform and attribute locations for performance
+    this.state.locations = {
+      u_resolution: gl.getUniformLocation(program, "u_resolution"),
+      u_cellSize: gl.getUniformLocation(program, "u_cellSize"),
+      a_offset: gl.getAttribLocation(program, "a_offset"),
+      a_color: gl.getAttribLocation(program, "a_color"),
+    };
   }
 
   createAndLinkProgram(gl) {
@@ -173,12 +195,11 @@ class KojiCanvas {
     gl.useProgram(program);
     gl.bindVertexArray(vao);
 
-    this.setUniforms(gl, program, canvas, cellSize);
+    this.setUniforms(gl, canvas, cellSize);
     this.updateInstanceBuffer(
       gl,
       this.state.buffers.offset,
       offsets,
-      program,
       "a_offset",
       2
     );
@@ -186,7 +207,6 @@ class KojiCanvas {
       gl,
       this.state.buffers.color,
       colors,
-      program,
       "a_color",
       4
     );
@@ -216,8 +236,19 @@ class KojiCanvas {
 
     const total = rows * cols;
 
-    const offsets = new Float32Array(total * 2);
-    const colors = new Float32Array(total * 4); // 4 components: RGBA
+    // 🧹 Buffer reuse optimization
+    // If grid size changed, reallocate buffers
+    if (
+      !this.state.gridSize ||
+      this.state.gridSize.rows !== rows ||
+      this.state.gridSize.cols !== cols
+    ) {
+      this.state.gridSize = { rows, cols };
+      this.state.offsets = new Float32Array(total * 2);
+      this.state.colors = new Float32Array(total * 4);
+    }
+    const offsets = this.state.offsets;
+    const colors = this.state.colors;
 
     let i = 0;
     for (let y = 0; y < rows; y++) {
@@ -250,18 +281,25 @@ class KojiCanvas {
     gl.clear(gl.COLOR_BUFFER_BIT);
   }
 
-  setUniforms(gl, program, canvas, cellSize) {
-    // Pass uniforms
-    const resLoc = gl.getUniformLocation(program, "u_resolution");
-    const cellSizeLoc = gl.getUniformLocation(program, "u_cellSize");
-    gl.uniform2f(resLoc, canvas.width, canvas.height);
-    gl.uniform1f(cellSizeLoc, cellSize);
+  setUniforms(gl, canvas, cellSize) {
+    // Set uniforms using cached locations
+    gl.uniform2f(
+      this.state.locations.u_resolution,
+      canvas.width,
+      canvas.height
+    );
+    gl.uniform1f(this.state.locations.u_cellSize, cellSize);
   }
 
-  updateInstanceBuffer(gl, buffer, data, program, attribName, size) {
+  updateInstanceBuffer(gl, buffer, data, attribName, size) {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
-    const attribLoc = gl.getAttribLocation(program, attribName);
+    // Use cached attribute location if available
+    let attribLoc = this.state.locations[attribName];
+    if (attribLoc === undefined) {
+      // fallback for a_pos (not cached)
+      attribLoc = gl.getAttribLocation(this.state.program, attribName);
+    }
     gl.enableVertexAttribArray(attribLoc);
     gl.vertexAttribPointer(attribLoc, size, gl.FLOAT, false, 0, 0);
     gl.vertexAttribDivisor(attribLoc, 1);
